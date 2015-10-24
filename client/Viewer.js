@@ -10,6 +10,7 @@ export default class Viewer {
 
   constructor(container) {
     this.socket = io();
+    this.isFollowing = false;
 
     this.socket.on('camera', this.handleRemoteCameraChange.bind(this));
 
@@ -39,7 +40,7 @@ export default class Viewer {
     this.renderer = new THREE.WebGLRenderer({
       antialias: true
     });
-    this.renderer.setClearColor(0x000000);
+
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     container.appendChild(this.renderer.domElement);
 
@@ -72,10 +73,12 @@ export default class Viewer {
   }
 
   handleRemoteCameraChange(data) {
-    console.log(data);
-    this.camera.position.copy(new THREE.Vector3().fromArray(data[0]));
-    this.camera.up.copy(new THREE.Vector3().fromArray(data[1]));
-    this.controls.target.copy(new THREE.Vector3().fromArray(data[2]));
+    if (this.isFollowing) {
+      console.log(data);
+      this.camera.position.copy(new THREE.Vector3().fromArray(data[0]));
+      this.camera.up.copy(new THREE.Vector3().fromArray(data[1]));
+      this.controls.target.copy(new THREE.Vector3().fromArray(data[2]));
+    }
   }
 
   start() {
@@ -83,6 +86,12 @@ export default class Viewer {
   }
 
   render() {
+    if (this.isFollowing) {
+      this.renderer.setClearColor(0x003366);
+    } else {
+      this.renderer.setClearColor(0x000000);
+    }
+
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }
