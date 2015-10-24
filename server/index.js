@@ -1,5 +1,3 @@
-/* eslint no-console: 0 */
-
 import path from 'path';
 import express from 'express';
 import http from 'http';
@@ -21,10 +19,8 @@ app.use(express.static(PUBLIC_PATH));
 // });
 
 io.on('connection', (socket) => {
-  console.log('a user connected');
-
   socket.on('disconnect', () => {
-    console.log('user disconnected');
+    // console.log('user disconnected');
   });
 
   socket.on('camera', (msg) => {

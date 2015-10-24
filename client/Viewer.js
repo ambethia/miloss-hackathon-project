@@ -12,17 +12,20 @@ export default class Viewer {
   constructor(container) {
     this.socket = io();
     this.isFollowing = false;
+    this.remoteCameraTarget = null;
+    this.remoteCameraClock = new THREE.Clock(false);
 
     this.socket.on('camera', this.handleRemoteCameraChange.bind(this));
 
     container.className = styles.viewer;
 
-    this.camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
+    this.camera = new THREE.PerspectiveCamera(
+      70, window.innerWidth / window.innerHeight, 1, 10000);
     this.camera.position.z = 1000;
 
     this.controls = new Trackball(this.camera, container);
     this.controls.target.set(0, 0, 0);
-    this.controls.rotateSpeed = 1.0;
+    this.controls.rotateSpeed = 2.0;
     this.controls.zoomSpeed = 1.2;
     this.controls.panSpeed = 0.8;
     this.controls.noZoom = false;
@@ -30,13 +33,12 @@ export default class Viewer {
     this.controls.staticMoving = true;
     this.controls.dynamicDampingFactor = 0.3;
 
-    this.controls.addEventListener('change', _.debounce(() => {
-      this.socket.emit('camera', [
-        this.camera.position.toArray(),
-        this.camera.up.toArray(),
-        this.controls.target.toArray(),
-      ]);
-    }, 100, { leading: true, maxWait: 500 }));
+    this.controls.addEventListener(
+      'change',
+      _.debounce(this.handleControlsChanged.bind(this), 10, {
+        leading: true,
+        maxWait: 50
+      }));
 
     this.renderer = new THREE.WebGLRenderer({
       antialias: true
@@ -63,6 +65,8 @@ export default class Viewer {
     directionalLight.position.set(0, 500, 2000);
     this.scene.add(directionalLight);
 
+    this.renderer.setClearColor(0x222222);
+
     window.addEventListener('resize', this.handleResize.bind(this), false);
   }
 
@@ -75,10 +79,42 @@ export default class Viewer {
 
   handleRemoteCameraChange(data) {
     if (this.isFollowing) {
-      this.camera.position.copy(new THREE.Vector3().fromArray(data[0]));
-      this.camera.up.copy(new THREE.Vector3().fromArray(data[1]));
-      this.controls.target.copy(new THREE.Vector3().fromArray(data[2]));
+      this.remoteCameraTarget = {
+        position: new THREE.Vector3().fromArray(data[0]),
+        up: new THREE.Vector3().fromArray(data[1]),
+        target: new THREE.Vector3().fromArray(data[2])
+      };
+      this.remoteCameraClock.elapsedTime = 0;
+      this.remoteCameraClock.start();
     }
+  }
+
+  updateCamera() {
+    let t = 0;
+    if (this.remoteCameraClock.getElapsedTime() > 0.5) {
+      this.remoteCameraClock.stop();
+      this.remoteCameraClock.elapsedTime = 0;
+      t = 1;
+    } else {
+      t = this.remoteCameraClock.getElapsedTime() * 2;
+    }
+
+    if (this.remoteCameraTarget) {
+      this.camera.position.lerp(
+        this.remoteCameraTarget.position, t);
+      this.camera.up.lerp(
+        this.remoteCameraTarget.up, t);
+      this.controls.target.lerp(
+        this.remoteCameraTarget.target, t);
+    }
+  }
+
+  handleControlsChanged() {
+    this.socket.emit('camera', [
+      this.camera.position.toArray(),
+      this.camera.up.toArray(),
+      this.controls.target.toArray(),
+    ]);
   }
 
   start() {
@@ -86,12 +122,7 @@ export default class Viewer {
   }
 
   render() {
-    if (this.isFollowing) {
-      this.renderer.setClearColor(0x003366);
-    } else {
-      this.renderer.setClearColor(0x000000);
-    }
-
+    this.updateCamera();
     this.controls.update();
     this.renderer.render(this.scene, this.camera);
   }
