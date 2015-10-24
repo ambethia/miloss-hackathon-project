@@ -37,7 +37,7 @@ let config = {
         loader: 'babel'
       }, {
         test: /\.less$/,
-        loader: 'style!css!postcss!less'
+        loader: 'style!css?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss!less'
       }]
     },
     resolve: {
