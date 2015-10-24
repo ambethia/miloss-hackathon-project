@@ -32,10 +32,12 @@ io.on('connection', (socket) => {
   });
 });
 
-app.get('*', function response(req, res) {
-  res.sendFile(path.join(PUBLIC_PATH, 'index.html'));
-});
-
-if (process.env.NODE_ENV !== 'production') require('./dev')(app);
+if (process.env.NODE_ENV !== 'production') {
+  require('./dev')(app);
+} else {
+  app.get('*', function response(req, res) {
+    res.sendFile(path.join(PUBLIC_PATH, 'index.html'));
+  });
+}
 
 server.listen(PORT);

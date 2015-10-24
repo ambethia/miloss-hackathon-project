@@ -1,6 +1,7 @@
 import THREE from 'three';
 import Trackball from '../vendor/trackball';
 import io from 'socket.io-client';
+import _ from 'lodash';
 
 import styles from './Viewer.less';
 
@@ -29,13 +30,13 @@ export default class Viewer {
     this.controls.staticMoving = true;
     this.controls.dynamicDampingFactor = 0.3;
 
-    this.controls.addEventListener('change', () => {
+    this.controls.addEventListener('change', _.debounce(() => {
       this.socket.emit('camera', [
         this.camera.position.toArray(),
         this.camera.up.toArray(),
         this.controls.target.toArray(),
       ]);
-    });
+    }, 100, { leading: true, maxWait: 500 }));
 
     this.renderer = new THREE.WebGLRenderer({
       antialias: true
@@ -74,7 +75,6 @@ export default class Viewer {
 
   handleRemoteCameraChange(data) {
     if (this.isFollowing) {
-      console.log(data);
       this.camera.position.copy(new THREE.Vector3().fromArray(data[0]));
       this.camera.up.copy(new THREE.Vector3().fromArray(data[1]));
       this.controls.target.copy(new THREE.Vector3().fromArray(data[2]));
