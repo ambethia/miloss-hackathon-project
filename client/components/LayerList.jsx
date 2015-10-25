@@ -12,11 +12,11 @@ class LayerList extends Component {
 
   render() {
     return (
-      <ul className={styles.layerList}>
+      <table className={styles.layerList}>
         {this.props.layers.map((layer, index) =>
           <LayerItem {...layer} key={index} onClick={this.toggleClick} />
         )}
-      </ul>
+      </table>
     );
   }
 }

@@ -2,6 +2,7 @@ import React, {
   Component,
   PropTypes
 } from 'react';
+import Icon from 'react-fa';
 
 import styles from './LayerItem.less';
 
@@ -14,13 +15,16 @@ export default class LayerItem extends Component {
 
   render() {
     const visibility = this.props.visible ? styles.visible : styles.hidden;
-
+    const visIcon = this.props.visible ? 'eye' : 'eye-slash';
     return (
-      <li className={`${styles.layerItem} ${visibility}`}>
-        <button onClick={this.handleClick}>
-          <span ref="name">{this.props.name}</span>
-        </button>
-      </li>
+      <tr className={`${styles.layerItem} ${visibility}`}>
+        <td ref="name">{this.props.name}</td>
+        <td>
+          <button onClick={this.handleClick}>
+            <Icon name={visIcon} />
+          </button>
+        </td>
+      </tr>
     );
   }
 }

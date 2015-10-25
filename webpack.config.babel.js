@@ -38,6 +38,12 @@ let config = {
       }, {
         test: /\.less$/,
         loader: 'style!css?modules&importLoaders=1&localIdentName=[name]__[local]___[hash:base64:5]!postcss!less'
+      }, {
+        test: /\.(css)(\?.+)?$/,
+        loader: 'style!css'
+      }, {
+        test: /\.(ttf|eot|svg|otf|svg|woff|woff2)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+        loader: "file-loader"
       }]
     },
     resolve: {
