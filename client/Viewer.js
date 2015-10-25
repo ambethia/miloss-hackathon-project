@@ -42,13 +42,14 @@ export default class Viewer {
 
     this.controls.addEventListener(
       'change',
-      _.debounce(this.handleControlsChanged.bind(this), 10, {
+      _.debounce(this.handleControlsChanged.bind(this), 5, {
         leading: true,
-        maxWait: 50
+        maxWait: 25
       }));
 
     this.renderer = new THREE.WebGLRenderer({
-      antialias: true
+      antialias: true,
+      alpha: true
     });
 
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -78,7 +79,7 @@ export default class Viewer {
     this.light = new THREE.SpotLight(0xffffff, 1.5);
     this.scene.add(this.light);
 
-    this.renderer.setClearColor(0x222222);
+    this.renderer.setClearColor( 0x000000, 0 );
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
 
