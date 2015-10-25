@@ -4,7 +4,7 @@ import io from 'socket.io-client';
 import _ from 'lodash';
 
 import '../vendor/ColladaLoader';
-
+import * as actions from './actions';
 import styles from './Viewer.less';
 
 const SMOOTH_TIME = 0.5;
@@ -13,12 +13,14 @@ window.THREE = THREE;
 
 export default class Viewer {
 
-  constructor(container) {
+  constructor(store, container) {
+    this.store = store;
     this.socket = io();
     this.isFollowing = false;
     this.remoteCameraTarget = null;
     this.selectedObject = null;
     this.remoteCameraClock = new THREE.Clock(false);
+    this.store.subscribe(this.handleStateChange);
 
     this.socket.on('camera', this.handleRemoteCameraChange.bind(this));
 
@@ -64,6 +66,10 @@ export default class Viewer {
     loader.load('/assets/canteen.dae', (collada) => {
       this.object = collada.scene;
       this.scene.add(this.object);
+
+      _.each(this.object.children, (object) => {
+        store.dispatch(actions.addLayer(object.name));
+      });
     });
     // (xhr) => { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); }
 
@@ -144,6 +150,14 @@ export default class Viewer {
       intersected.material = this.selectedMaterial;
       this.selectedObject = intersected;
     }
+  }
+
+  handleStateChange = () => {
+    const state = this.store.getState();
+    _.each(state.layers, (layer) => {
+      const object = this.scene.getObjectByName(layer.name);
+      object.visible = layer.visible;
+    });
   }
 
   start() {
