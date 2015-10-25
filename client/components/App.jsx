@@ -3,6 +3,10 @@ import React from 'react';
 import styles from './App.less';
 
 class App extends React.Component {
+  // static propTypes = {
+  //   viewer: React.PropTypes.boolean
+  // }
+
   render() {
     return (
       <div className={styles.app}>

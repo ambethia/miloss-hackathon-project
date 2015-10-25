@@ -3,7 +3,11 @@ import Trackball from '../vendor/trackball';
 import io from 'socket.io-client';
 import _ from 'lodash';
 
+import '../vendor/ColladaLoader';
+
 import styles from './Viewer.less';
+
+const SMOOTH_TIME = 0.5;
 
 window.THREE = THREE;
 
@@ -13,6 +17,7 @@ export default class Viewer {
     this.socket = io();
     this.isFollowing = false;
     this.remoteCameraTarget = null;
+    this.selectedObject = null;
     this.remoteCameraClock = new THREE.Clock(false);
 
     this.socket.on('camera', this.handleRemoteCameraChange.bind(this));
@@ -20,7 +25,7 @@ export default class Viewer {
     container.className = styles.viewer;
 
     this.camera = new THREE.PerspectiveCamera(
-      70, window.innerWidth / window.innerHeight, 1, 10000);
+      50, window.innerWidth / window.innerHeight, 1, 10000);
     this.camera.position.z = 1000;
 
     this.controls = new Trackball(this.camera, container);
@@ -48,26 +53,31 @@ export default class Viewer {
     container.appendChild(this.renderer.domElement);
 
     this.scene = new THREE.Scene();
-    this.scene.add(new THREE.AmbientLight(0x555555));
+    this.scene.add(new THREE.AmbientLight(0x999999));
 
-    const geometry = new THREE.BoxGeometry(1, 1, 1);
-    const material = new THREE.MeshLambertMaterial({
-      color: 0xffffff,
-      wireframe: true,
+    this.selectedMaterial = new THREE.MeshLambertMaterial({
+      color: 0x3333CC,
       vertexColors: THREE.VertexColors
     });
 
-    const cube = new THREE.Mesh(geometry, material);
-    this.scene.add(cube);
-    this.camera.position.z = 5;
+    const loader = new THREE.ColladaLoader();
+    loader.load('/assets/canteen.dae', (collada) => {
+      this.object = collada.scene;
+      this.scene.add(this.object);
+    });
+    // (xhr) => { console.log((xhr.loaded / xhr.total * 100) + '% loaded'); }
 
-    const directionalLight = new THREE.SpotLight(0xffffff, 1.5);
-    directionalLight.position.set(0, 500, 2000);
-    this.scene.add(directionalLight);
+    this.camera.position.z = 2;
+
+    this.light = new THREE.SpotLight(0xffffff, 1.5);
+    this.scene.add(this.light);
 
     this.renderer.setClearColor(0x222222);
+    this.renderer.setPixelRatio(window.devicePixelRatio);
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
 
     window.addEventListener('resize', this.handleResize.bind(this), false);
+    this.renderer.domElement.addEventListener('click', this.handleClick.bind(this), false);
   }
 
   handleResize() {
@@ -91,21 +101,18 @@ export default class Viewer {
 
   updateCamera() {
     let t = 0;
-    if (this.remoteCameraClock.getElapsedTime() > 0.5) {
+    if (this.remoteCameraClock.getElapsedTime() > SMOOTH_TIME) {
       this.remoteCameraClock.stop();
       this.remoteCameraClock.elapsedTime = 0;
       t = 1;
     } else {
-      t = this.remoteCameraClock.getElapsedTime() * 2;
+      t = this.remoteCameraClock.getElapsedTime() * (1 / SMOOTH_TIME);
     }
 
     if (this.remoteCameraTarget) {
-      this.camera.position.lerp(
-        this.remoteCameraTarget.position, t);
-      this.camera.up.lerp(
-        this.remoteCameraTarget.up, t);
-      this.controls.target.lerp(
-        this.remoteCameraTarget.target, t);
+      this.camera.position.lerp(this.remoteCameraTarget.position, t);
+      this.camera.up.lerp(this.remoteCameraTarget.up, t);
+      this.controls.target.lerp(this.remoteCameraTarget.target, t);
     }
   }
 
@@ -115,6 +122,28 @@ export default class Viewer {
       this.camera.up.toArray(),
       this.controls.target.toArray(),
     ]);
+  }
+
+  handleClick(event) {
+    event.preventDefault();
+    if (this.selectedObject) {
+      this.selectedObject.material = this.selectedObject.originalMaterial;
+    }
+
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+    mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+    mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+    raycaster.setFromCamera(mouse, this.camera);
+    const objects = raycaster.intersectObjects(this.scene.children, true);
+
+    if (objects.length > 0) {
+      const intersected = objects[0].object;
+
+      intersected.originalMaterial = intersected.material;
+      intersected.material = this.selectedMaterial;
+      this.selectedObject = intersected;
+    }
   }
 
   start() {
@@ -128,6 +157,9 @@ export default class Viewer {
   }
 
   animate() {
+    this.light.position.copy(this.camera.position);
+    this.light.position.y += 1; // this.scene.position.y + 1;
+
     requestAnimationFrame(this.animate.bind(this));
     this.render();
   }
